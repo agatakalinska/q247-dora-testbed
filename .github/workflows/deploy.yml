@@ -1,0 +1,29 @@
+# QA testbed for EXEFPF2KIK-1764 (DORA 08 - GitHub deployments ingest). Jobs only echo/sleep; no secrets.
+# Markers in the commit message: [fail] -> production job fails, [slow] -> production job sleeps ~25 min,
+# [skip-staging] -> no staging deployment. Tags v* deploy the tag (version) to gh-production.
+name: deploy
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'ok | fail | slow'
+        default: 'ok'
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: gh-production
+    steps:
+      - run: echo "deploy ${GITHUB_REF_NAME} ${GITHUB_SHA}"
+      - if: contains(github.event.head_commit.message, '[fail]') || inputs.mode == 'fail'
+        run: exit 1
+      - if: contains(github.event.head_commit.message, '[slow]') || inputs.mode == 'slow'
+        run: sleep 1500
+  deploy-staging:
+    if: github.ref_type == 'branch' && !contains(github.event.head_commit.message, '[skip-staging]')
+    runs-on: ubuntu-latest
+    environment: gh-staging
+    steps:
+      - run: echo "staging ${GITHUB_SHA}"
